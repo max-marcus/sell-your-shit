@@ -359,3 +359,17 @@ export function buildListingDescription(parts: ListingDescriptionParts): string 
 
   return lines.join('\n');
 }
+
+// ---------------------------------------------------------------------------
+// Listing templates (manual entry skeletons)
+// ---------------------------------------------------------------------------
+
+export {
+  LISTING_TEMPLATE_IDS,
+  LISTING_TEMPLATES,
+  buildFromListingTemplate,
+  getListingTemplate,
+  type BuildListingTemplateOpts,
+  type ListingTemplate,
+  type ListingTemplateId,
+} from './listing-templates';

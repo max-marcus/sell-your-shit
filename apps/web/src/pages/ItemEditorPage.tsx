@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
+  buildFromListingTemplate,
   buildListingDescription,
   CATEGORIES,
   CONDITIONS,
   CONDITION_LABELS,
+  LISTING_TEMPLATES,
   type Condition,
   type Item,
+  type ListingTemplateId,
   type SettingsResponse,
 } from '@sell/core';
 import { api } from '../api';
@@ -15,9 +18,21 @@ import { PublishPanel } from '../components/PublishPanel';
 
 const DEFAULT_CONDITION: Condition = 'good';
 const DEFAULT_CATEGORY = CATEGORIES[CATEGORIES.length - 1]!.key; // "general"
+const DEFAULT_TEMPLATE: ListingTemplateId = 'standard_household';
 
-function emptyTemplate(pickupLine: string): string {
-  return buildListingDescription({ pickupLine });
+function descriptionFromTemplate(templateId: ListingTemplateId, pickupLine: string): string {
+  return buildFromListingTemplate(templateId, { pickupLine });
+}
+
+function isLikelyBlankDescription(text: string, pickupLine: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return true;
+  // Unedited retail skeleton or any of the listing templates count as blank for nudge purposes.
+  const baselines = [
+    buildListingDescription({ pickupLine }),
+    ...LISTING_TEMPLATES.map((t) => descriptionFromTemplate(t.id, pickupLine)),
+  ];
+  return baselines.some((b) => b.trim() === trimmed);
 }
 
 export function ItemEditorPage() {
@@ -41,6 +56,7 @@ export function ItemEditorPage() {
   const [scrapeNote, setScrapeNote] = useState<string | null>(null);
   const [retailPriceCents, setRetailPriceCents] = useState<number | null>(null);
   const [templateSeeded, setTemplateSeeded] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<ListingTemplateId>(DEFAULT_TEMPLATE);
 
   useEffect(() => {
     void api
@@ -48,12 +64,25 @@ export function ItemEditorPage() {
       .then((s) => {
         setSettings(s);
         if (isNew && !templateSeeded) {
-          setDescription(emptyTemplate(s.listing.pickupLine));
+          setDescription(descriptionFromTemplate(DEFAULT_TEMPLATE, s.listing.pickupLine));
           setTemplateSeeded(true);
         }
       })
       .catch(() => undefined);
   }, [isNew, templateSeeded]);
+
+  function applyTemplate(nextId: ListingTemplateId) {
+    const pickupLine = settings?.listing.pickupLine ?? 'Local pickup only';
+    const hasEdits = !isLikelyBlankDescription(description, pickupLine);
+    if (
+      hasEdits &&
+      !confirm('Replace the current description with this template? Your edits will be lost.')
+    ) {
+      return;
+    }
+    setSelectedTemplate(nextId);
+    setDescription(descriptionFromTemplate(nextId, pickupLine));
+  }
 
   useEffect(() => {
     if (!id) return;
@@ -265,17 +294,39 @@ export function ItemEditorPage() {
           <span className="hint">Mapped to each marketplace's closest category when publishing.</span>
         </div>
         <div className="field">
+          <label htmlFor="listingTemplate">Listing template</label>
+          <select
+            id="listingTemplate"
+            value={selectedTemplate}
+            onChange={(e) => applyTemplate(e.target.value as ListingTemplateId)}
+          >
+            {LISTING_TEMPLATES.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+          <span className="hint">
+            {LISTING_TEMPLATES.find((t) => t.id === selectedTemplate)?.hint ??
+              'Pick a template, then replace the [placeholders].'}{' '}
+            Fetching a retail link still fills the price / retail skeleton.
+          </span>
+        </div>
+        <div className="field">
           <label htmlFor="description">Description</label>
           <textarea
             id="description"
             value={description}
-            placeholder={emptyTemplate(settings?.listing.pickupLine ?? 'Local pickup only')}
+            placeholder={descriptionFromTemplate(
+              selectedTemplate,
+              settings?.listing.pickupLine ?? 'Local pickup only',
+            )}
             onChange={(e) => setDescription(e.target.value)}
-            style={{ minHeight: 220 }}
+            style={{ minHeight: 280 }}
           />
           <span className="hint">
-            Template: asking price OBO → retail price → concise blurb → pickup line → longer
-            summary → retail link.
+            Replace [bracketed] placeholders. Lead with what it is + condition, call out wear
+            honestly, and keep pickup / meetup clear.
           </span>
         </div>
         <div className="row">

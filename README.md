@@ -12,6 +12,7 @@ Built for personal, single-machine use — no auth, accounts, or hosted deploy.
 ## What works today
 
 - **Inventory UI** — list items, create/edit, manage photo order (first = cover)
+- **Listing templates** — resale-ready description skeletons for household, large items, lots, and tickets
 - **Retail link scrape** — paste a product URL to pull title, price, and description hints
 - **Local config** — `config.json` (location, pickup line, publish timing) and `secrets.json` (marketplace logins); both are git-ignored — copy from the `*.example` files
 - **Publish job queue** — pick platforms per item; jobs run via Playwright against a real Chromium window
@@ -65,7 +66,7 @@ apps/
   server/      Fastify API, SQLite, photo storage, publish job queue, retail scrape
   web/         Vite + React UI (inventory, item editor, settings, publish panel)
 packages/
-  core/        Shared types, zod schemas, category mapping, description template
+  core/        Shared types, zod schemas, category mapping, listing templates
   publishers/  Playwright publishers (craigslist / offerup / facebook) + mock
 data/          SQLite DB, photos, browser profiles, debug output (git-ignored)
 config.json    Local location / listing defaults (git-ignored; see *.example)
