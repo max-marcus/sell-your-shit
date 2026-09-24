@@ -53,7 +53,7 @@ apps/
   server/   Fastify API, SQLite, photo storage, publish job queue
   web/       Vite + React UI
 packages/
-  core/      Shared types, zod schemas, category mapping (used by server + web)
+  core/      Shared types, zod schemas, category mapping, listing templates
   publishers/ Playwright publishers (craigslist / offerup / facebook) + mock
 data/        SQLite DB, photos, browser profiles, debug output (git-ignored)
 ```
