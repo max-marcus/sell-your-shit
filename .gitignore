@@ -1,0 +1,13 @@
+node_modules/
+dist/
+*.log
+
+# Local data, secrets, and browser profiles — never commit these
+data/
+config.json
+secrets.json
+.env
+.env.*
+
+# OS / editor cruft
+.DS_Store

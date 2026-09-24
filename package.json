@@ -1,0 +1,29 @@
+{
+  "name": "sell-your-shit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local tool to create sale listings across Facebook Marketplace, OfferUp, and Craigslist from one place.",
+  "scripts": {
+    "dev": "concurrently -n server,web -c blue,green \"pnpm --filter @sell/server dev\" \"pnpm --filter @sell/web dev\"",
+    "build": "pnpm --filter @sell/web build",
+    "start": "pnpm --filter @sell/server start",
+    "typecheck": "pnpm -r typecheck",
+    "harness:facebook": "pnpm --filter @sell/server harness:facebook",
+    "harness:craigslist": "pnpm --filter @sell/server harness:craigslist",
+    "setup:browsers": "pnpm --filter @sell/publishers exec playwright install chromium"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "concurrently": "^10.0.3",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "sharp",
+      "esbuild"
+    ]
+  }
+}

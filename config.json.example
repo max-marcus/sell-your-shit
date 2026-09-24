@@ -1,0 +1,19 @@
+{
+  "location": {
+    "city": "San Francisco",
+    "state": "CA",
+    "zip": "94102",
+    "latitude": 37.7749,
+    "longitude": -122.4194
+  },
+  "listing": {
+    "pickupLine": "Local pickup only",
+    "askingPriceFraction": 0.5
+  },
+  "publish": {
+    "headless": false,
+    "slowMoMs": 50,
+    "timeoutMs": 120000
+  },
+  "maxPhotos": 12
+}
