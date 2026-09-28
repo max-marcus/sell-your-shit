@@ -14,6 +14,7 @@ Built for personal, single-machine use — no auth, accounts, or hosted deploy.
 - **Inventory UI** — list items, create/edit, manage photo order (first = cover)
 - **Listing templates** — resale-ready description skeletons for household, large items, lots, and tickets
 - **Retail link scrape** — paste a product URL to pull title, price, and description hints
+- **AI assist chat** — describe an item in the item editor; an LLM asks follow-up questions and suggests title, description, price, condition, and category. You apply each suggestion yourself. Needs `OPENROUTER_API_KEY` in `.env`; without it the app works as before
 - **Local config** — `config.json` (location, pickup line, publish timing) and `secrets.json` (marketplace logins); both are git-ignored — copy from the `*.example` files
 - **Publish job queue** — pick platforms per item; jobs run via Playwright against a real Chromium window
 - **Mock mode** — `MOCK_PUBLISH=1` simulates publishing with no credentials
@@ -43,6 +44,7 @@ pnpm run setup:browsers          # one-time Chromium download for Playwright
 
 cp config.json.example config.json
 cp secrets.json.example secrets.json   # optional until you publish for real
+cp .env.sample .env                    # optional; add OPENROUTER_API_KEY for AI assist
 
 # Simulated publishing (no credentials needed):
 MOCK_PUBLISH=1 pnpm dev
@@ -63,14 +65,15 @@ pnpm start      # API + UI at http://localhost:8123 (binds to 127.0.0.1)
 
 ```
 apps/
-  server/      Fastify API, SQLite, photo storage, publish job queue, retail scrape
-  web/         Vite + React UI (inventory, item editor, settings, publish panel)
+  server/      Fastify API, SQLite, photo storage, publish job queue, retail scrape, AI assist
+  web/         Vite + React UI (inventory, item editor, AI assist chat, settings, publish panel)
 packages/
   core/        Shared types, zod schemas, category mapping, listing templates
   publishers/  Playwright publishers (craigslist / offerup / facebook) + mock
 data/          SQLite DB, photos, browser profiles, debug output (git-ignored)
 config.json    Local location / listing defaults (git-ignored; see *.example)
 secrets.json   Marketplace credentials (git-ignored; see *.example)
+.env           Environment variables, e.g. OPENROUTER_API_KEY (git-ignored; see .env.sample)
 ```
 
 ## Commands
@@ -85,6 +88,43 @@ secrets.json   Marketplace credentials (git-ignored; see *.example)
 | `pnpm harness:craigslist` | Manual Craigslist publisher dry-run / debug |
 | `pnpm harness:facebook` | Manual Facebook publisher dry-run / debug |
 | `MOCK_PUBLISH=1 …` | Forces simulated publishing on any command |
+
+## AI assist
+
+The server calls `openai/gpt-oss-120b` through [OpenRouter](https://openrouter.ai),
+with Cerebras as the inference provider. The API key stays on the server. The
+server keeps no chat state; the web UI sends the conversation and the current
+form values with each message.
+
+The feature is modular. The route `POST /api/assist/:profile` is generic. An
+**assist profile** supplies the page-specific parts: a context schema, a
+suggestions schema, and a system prompt.
+
+| Part | Location |
+|------|----------|
+| LLM client interface and OpenRouter client | `apps/server/src/llm/` |
+| Profile interface, registry, and service | `apps/server/src/assist/` |
+| Generic route | `apps/server/src/routes/assist.ts` |
+| Chat hook and panel | `apps/web/src/hooks/useAssistChat.ts`, `apps/web/src/components/AssistChat.tsx` |
+
+### How to add an AI chat to a page
+
+1. Add the context and suggestions zod schemas to `packages/core`. Use `.nullable()`, not `.optional()`, for suggestion fields, because strict Structured Outputs need every field.
+2. Add a profile in `apps/server/src/assist/profiles/<name>.ts` that implements `AssistProfile`.
+3. Add the profile to the list in `apps/server/src/assist/registry.ts`.
+4. Render the panel on the page:
+
+   ```tsx
+   <AssistChat<MySuggestions>
+     profile="<name>"
+     getContext={() => ({ /* current page values */ })}
+     onSuggestions={(s) => { /* show suggestions; apply only on a user action */ }}
+   />
+   ```
+
+You do not need to change the route, the service, the LLM client, the chat
+component, or the hook. The `listing` profile in
+`apps/server/src/assist/profiles/listing.ts` is a complete example.
 
 ## Data model
 

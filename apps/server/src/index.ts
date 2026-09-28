@@ -1,3 +1,4 @@
+import './env';
 import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import Fastify from 'fastify';
@@ -9,6 +10,8 @@ import { itemRoutes } from './routes/items';
 import { publishRoutes } from './routes/publish';
 import { settingsRoutes } from './routes/settings';
 import { scrapeRoutes } from './routes/scrape';
+import { assistRoutes } from './routes/assist';
+import { createLlmClientFromEnv } from './llm/openrouter';
 import { recoverStaleJobs } from './jobs';
 
 const PORT = Number(process.env.PORT ?? 8123);
@@ -42,8 +45,10 @@ async function main(): Promise<void> {
   // API routes.
   await app.register(itemRoutes, { prefix: '/api' });
   await app.register(publishRoutes, { prefix: '/api' });
-  await app.register(settingsRoutes, { prefix: '/api' });
+  const llm = createLlmClientFromEnv();
+  await app.register(settingsRoutes, { prefix: '/api', aiAssistConfigured: llm !== null });
   await app.register(scrapeRoutes, { prefix: '/api' });
+  await app.register(assistRoutes, { prefix: '/api', llm });
 
   // In a production-style run (`pnpm build` first), serve the built web UI and
   // fall back to index.html for client-side routes. In dev the UI is served by

@@ -86,7 +86,8 @@ export function getCategory(key: string): CategoryDef {
   return CATEGORY_BY_KEY.get(key) ?? CATEGORIES[CATEGORIES.length - 1]!;
 }
 
-const CATEGORY_KEYS = CATEGORIES.map((c) => c.key) as [string, ...string[]];
+/** Every category key, typed for `z.enum`. */
+export const CATEGORY_KEYS = CATEGORIES.map((c) => c.key) as [string, ...string[]];
 
 // ---------------------------------------------------------------------------
 // Records (DB-backed + API-serialized shapes)
@@ -141,6 +142,39 @@ export type ItemInput = z.infer<typeof itemInputSchema>;
 
 export const itemUpdateSchema = itemInputSchema.partial();
 export type ItemUpdate = z.infer<typeof itemUpdateSchema>;
+
+/** Current item editor values, sent with each `listing` assist message. */
+export const listingAssistContextSchema = z.object({
+  title: z.string().max(200),
+  description: z.string().max(8000),
+  priceCents: z.number().int().min(0).nullable(),
+  condition: z.enum(CONDITIONS),
+  category: z.enum(CATEGORY_KEYS),
+});
+export type ListingAssistContext = z.infer<typeof listingAssistContextSchema>;
+
+/**
+ * Item editor values that the `listing` assist profile suggests. Every field is
+ * nullable, not optional, because strict Structured Outputs need every field.
+ */
+export const listingAssistSuggestionsSchema = z.object({
+  title: z
+    .string()
+    .nullable()
+    .describe('Listing title, 120 characters or fewer. Null if not enough information.'),
+  description: z
+    .string()
+    .nullable()
+    .describe('Full listing description based on a listing template. Null if not enough information.'),
+  priceCents: z
+    .number()
+    .int()
+    .nullable()
+    .describe('Suggested asking price in US cents, for example 4500 for $45. Null if unsure.'),
+  condition: z.enum(CONDITIONS).nullable().describe('Item condition. Null if unknown.'),
+  category: z.enum(CATEGORY_KEYS).nullable().describe('Category key. Null if unsure.'),
+});
+export type ListingAssistSuggestions = z.infer<typeof listingAssistSuggestionsSchema>;
 
 export const publishRequestSchema = z.object({
   platforms: z.array(z.enum(PLATFORMS)).min(1, 'Select at least one platform'),
@@ -294,6 +328,8 @@ export interface SettingsResponse {
   configured: Record<Platform, boolean>;
   /** When true, all publishing is simulated regardless of credentials. */
   mockMode: boolean;
+  /** True when `OPENROUTER_API_KEY` is set, so AI assist chats work. */
+  aiAssistConfigured: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -373,3 +409,16 @@ export {
   type ListingTemplate,
   type ListingTemplateId,
 } from './listing-templates';
+
+// ---------------------------------------------------------------------------
+// AI assist chat (generic contract)
+// ---------------------------------------------------------------------------
+
+export {
+  assistRequestSchema,
+  chatMessageSchema,
+  type AssistRequest,
+  type AssistResponse,
+  type AssistStatusResponse,
+  type ChatMessage,
+} from './assist';

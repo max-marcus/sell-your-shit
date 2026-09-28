@@ -6,19 +6,35 @@ import {
   CATEGORIES,
   CONDITIONS,
   CONDITION_LABELS,
+  formatPrice,
+  getCategory,
   LISTING_TEMPLATES,
   type Condition,
   type Item,
+  type ListingAssistContext,
+  type ListingAssistSuggestions,
   type ListingTemplateId,
   type SettingsResponse,
 } from '@sell/core';
 import { api } from '../api';
+import { AssistChat } from '../components/AssistChat';
 import { PhotoManager } from '../components/PhotoManager';
 import { PublishPanel } from '../components/PublishPanel';
+import { SuggestionHint } from '../components/SuggestionHint';
 
 const DEFAULT_CONDITION: Condition = 'good';
 const DEFAULT_CATEGORY = CATEGORIES[CATEGORIES.length - 1]!.key; // "general"
 const DEFAULT_TEMPLATE: ListingTemplateId = 'standard_household';
+
+type SuggestionField = keyof ListingAssistSuggestions;
+const SUGGESTION_FIELDS: SuggestionField[] = ['title', 'priceCents', 'condition', 'category', 'description'];
+const NO_SUGGESTIONS: ListingAssistSuggestions = {
+  title: null,
+  description: null,
+  priceCents: null,
+  condition: null,
+  category: null,
+};
 
 function descriptionFromTemplate(templateId: ListingTemplateId, pickupLine: string): string {
   return buildFromListingTemplate(templateId, { pickupLine });
@@ -57,6 +73,56 @@ export function ItemEditorPage() {
   const [retailPriceCents, setRetailPriceCents] = useState<number | null>(null);
   const [templateSeeded, setTemplateSeeded] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<ListingTemplateId>(DEFAULT_TEMPLATE);
+  const [suggestions, setSuggestions] = useState<ListingAssistSuggestions>(NO_SUGGESTIONS);
+  const hasSuggestions = SUGGESTION_FIELDS.some((f) => suggestions[f] !== null);
+
+  function priceCentsFromInput(): number | null {
+    const value = parseFloat(price);
+    return Number.isFinite(value) && value >= 0 ? Math.round(value * 100) : null;
+  }
+
+  function getAssistContext(): ListingAssistContext {
+    return { title, description, priceCents: priceCentsFromInput(), condition, category };
+  }
+
+  function receiveSuggestions(next: ListingAssistSuggestions) {
+    const current = getAssistContext();
+    setSuggestions((prev) => {
+      const merged = { ...prev };
+      for (const field of SUGGESTION_FIELDS) {
+        const value = next[field];
+        if (value !== null && value !== current[field]) Object.assign(merged, { [field]: value });
+      }
+      return merged;
+    });
+  }
+
+  function dismissSuggestion(field: SuggestionField) {
+    setSuggestions((prev) => ({ ...prev, [field]: null }));
+  }
+
+  function applySuggestion(field: SuggestionField) {
+    const s = suggestions;
+    if (field === 'title' && s.title !== null) setTitle(s.title);
+    if (field === 'description' && s.description !== null) setDescription(s.description);
+    if (field === 'priceCents' && s.priceCents !== null) setPrice(String(s.priceCents / 100));
+    if (field === 'condition' && s.condition !== null) setCondition(s.condition);
+    if (field === 'category' && s.category !== null) setCategory(s.category);
+    dismissSuggestion(field);
+  }
+
+  function applyAllSuggestions() {
+    SUGGESTION_FIELDS.forEach(applySuggestion);
+  }
+
+  function suggestionHint(field: SuggestionField, display: string | null) {
+    if (display === null) return null;
+    return (
+      <SuggestionHint onApply={() => applySuggestion(field)} onDismiss={() => dismissSuggestion(field)}>
+        {display}
+      </SuggestionHint>
+    );
+  }
 
   useEffect(() => {
     void api
@@ -212,6 +278,21 @@ export function ItemEditorPage() {
     <div className="panel">
       <h2>Details</h2>
       <div className="form" style={{ maxWidth: 'none' }}>
+        {hasSuggestions && (
+          <div className="suggestion">
+            <div className="assist-bar">
+              <span>AI assist has suggestions. Review them below each field.</span>
+              <div className="actions">
+                <button type="button" className="btn primary small" onClick={applyAllSuggestions}>
+                  Apply all
+                </button>
+                <button type="button" className="btn small" onClick={() => setSuggestions(NO_SUGGESTIONS)}>
+                  Dismiss all
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="field">
           <label htmlFor="retailUrl">Retail product link</label>
           <div className="row" style={{ gap: 8 }}>
@@ -257,6 +338,7 @@ export function ItemEditorPage() {
             placeholder="e.g. IKEA desk, white, good condition"
             onChange={(e) => setTitle(e.target.value)}
           />
+          {suggestionHint('title', suggestions.title)}
         </div>
         <div className="field row-2">
           <div className="field">
@@ -270,6 +352,10 @@ export function ItemEditorPage() {
               placeholder="0"
               onChange={(e) => setPrice(e.target.value)}
             />
+            {suggestionHint(
+              'priceCents',
+              suggestions.priceCents === null ? null : formatPrice(suggestions.priceCents),
+            )}
           </div>
           <div className="field">
             <label htmlFor="condition">Condition</label>
@@ -280,6 +366,10 @@ export function ItemEditorPage() {
                 </option>
               ))}
             </select>
+            {suggestionHint(
+              'condition',
+              suggestions.condition === null ? null : CONDITION_LABELS[suggestions.condition],
+            )}
           </div>
         </div>
         <div className="field">
@@ -292,6 +382,10 @@ export function ItemEditorPage() {
             ))}
           </select>
           <span className="hint">Mapped to each marketplace's closest category when publishing.</span>
+          {suggestionHint(
+            'category',
+            suggestions.category === null ? null : getCategory(suggestions.category).label,
+          )}
         </div>
         <div className="field">
           <label htmlFor="listingTemplate">Listing template</label>
@@ -328,6 +422,7 @@ export function ItemEditorPage() {
             Replace [bracketed] placeholders. Lead with what it is + condition, call out wear
             honestly, and keep pickup / meetup clear.
           </span>
+          {suggestionHint('description', suggestions.description)}
         </div>
         <div className="row">
           <button className="btn primary" onClick={save} disabled={saving}>
@@ -344,6 +439,16 @@ export function ItemEditorPage() {
     </div>
   );
 
+  const assistChat = (
+    <AssistChat<ListingAssistSuggestions>
+      profile="listing"
+      getContext={getAssistContext}
+      onSuggestions={receiveSuggestions}
+      intro="Describe your item: what it is, how old it is, and any wear or damage. I'll ask follow-up questions and suggest listing details you can apply."
+      placeholder="e.g. Oak dining table, seats 6, a few scratches on top"
+    />
+  );
+
   return (
     <>
       <div className="page-header">
@@ -353,33 +458,31 @@ export function ItemEditorPage() {
         </Link>
       </div>
 
-      {isNew ? (
-        <>
-          <div className="banner">
-            Paste a retail link to auto-fill details, or fill the form manually — then add photos
-            and publish.
-          </div>
+      {isNew && (
+        <div className="banner">
+          Paste a retail link to auto-fill details, describe the item to AI assist, or fill the form
+          manually — then add photos and publish.
+        </div>
+      )}
+      <div className="split">
+        <div style={{ display: 'grid', gap: 24 }}>
           {detailsForm}
-        </>
-      ) : (
-        <div className="split">
-          <div style={{ display: 'grid', gap: 24 }}>
-            {detailsForm}
-            {item && settings && (
-              <div className="panel">
-                <PhotoManager item={item} maxPhotos={settings.maxPhotos} onChange={setItem} />
-              </div>
-            )}
-          </div>
-          <div>
-            {item && settings ? (
+          {!isNew && item && settings && (
+            <div className="panel">
+              <PhotoManager item={item} maxPhotos={settings.maxPhotos} onChange={setItem} />
+            </div>
+          )}
+        </div>
+        <div style={{ display: 'grid', gap: 24 }}>
+          {assistChat}
+          {!isNew &&
+            (item && settings ? (
               <PublishPanel item={item} settings={settings} onComplete={() => void api.getItem(item.id).then(setItem)} />
             ) : (
               <div className="panel">Loading settings…</div>
-            )}
-          </div>
+            ))}
         </div>
-      )}
+      </div>
     </>
   );
 }

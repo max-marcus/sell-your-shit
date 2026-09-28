@@ -56,6 +56,24 @@ export function SettingsPage() {
       </div>
 
       <div className="panel" style={{ marginBottom: 20 }}>
+        <h2>AI assist</h2>
+        <p className="hint" style={{ color: 'var(--muted)', marginTop: 0 }}>
+          Chat in the item editor to fill in listing details. Set <code>OPENROUTER_API_KEY</code> in{' '}
+          <code>.env</code> at the project root, then restart the server.
+        </p>
+        <div className="platform-row">
+          <span className="name">OpenRouter</span>
+          <div className="meta">
+            {settings.aiAssistConfigured ? (
+              <Badge color="green">configured</Badge>
+            ) : (
+              <Badge color="amber">not configured (AI assist unavailable)</Badge>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="panel" style={{ marginBottom: 20 }}>
         <h2>Location</h2>
         <p className="hint" style={{ color: 'var(--muted)', marginTop: 0 }}>
           Edit <code>config.json</code> at the project root to change these.
