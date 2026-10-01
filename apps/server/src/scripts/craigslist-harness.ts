@@ -12,6 +12,7 @@
  *   pnpm harness:craigslist -- --headless
  *   pnpm harness:craigslist -- --keep 120   # (probe) seconds to leave browser open
  */
+import '../env';
 import { join } from 'node:path';
 import type { Item } from '@sell/core';
 import {

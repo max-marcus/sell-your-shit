@@ -55,6 +55,38 @@ left out (or missing email/password) automatically uses the **mock publisher**.
   login + 2FA in the visible window. After that the session is saved under
   `data/browser-profiles/facebook` and reused.
 
+### Environment variables — `.env`
+
+```bash
+cp .env.sample .env
+```
+
+`.env` is git-ignored. The server loads it from the repo root at startup.
+Variables set in your shell override values in the file.
+
+| Variable | What to put |
+|----------|-------------|
+| `OPENROUTER_API_KEY` | Your [OpenRouter API key](https://openrouter.ai/keys). Required only for the AI assist chat in the item editor. |
+| `PORT` / `HOST` | Optional. Server port and bind address (defaults: `8123`, `127.0.0.1`). |
+| `MOCK_PUBLISH` | Optional. Set to `1` to simulate publishing. |
+| `SYS_DATA_DIR` / `SYS_CONFIG` / `SYS_SECRETS` | Optional. Absolute paths that override the default `data/`, `config.json`, and `secrets.json` locations. |
+
+### AI assist
+
+To use the AI assist chat in the item editor:
+
+1. Set `OPENROUTER_API_KEY` in `.env`.
+2. Restart the server. The server reads the key only at startup.
+3. Open **Settings**. The **AI assist** panel shows **configured**.
+
+The chat sends your messages and the current form values to OpenRouter. The
+model runs on Cerebras. The chat never changes a field or saves the item until
+you click **Apply** or **Apply all**, and then **Save**. Suggested descriptions
+use the listing templates and your `listing.pickupLine` from `config.json`.
+
+Without a key, the chat panel shows "AI assist is not configured", and the rest
+of the app works as before.
+
 ## 4. Things worth telling me / deciding
 
 These affect how reliable each publisher is — answer them in `secrets.json` /

@@ -6,9 +6,14 @@ import { Badge } from '../components/StatusBadge';
 export function SettingsPage() {
   const [settings, setSettings] = useState<SettingsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [aiAssistConfigured, setAiAssistConfigured] = useState<boolean | null>(null);
 
   useEffect(() => {
     api.getSettings().then(setSettings).catch((err) => setError((err as Error).message));
+    api
+      .getAssistStatus()
+      .then((s) => setAiAssistConfigured(s.configured))
+      .catch(() => setAiAssistConfigured(false));
   }, []);
 
   if (error) return <div className="banner warn">{error}</div>;
@@ -53,6 +58,24 @@ export function SettingsPage() {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="panel" style={{ marginBottom: 20 }}>
+        <h2>AI assist</h2>
+        <p className="hint" style={{ color: 'var(--muted)', marginTop: 0 }}>
+          Chat in the item editor to fill in listing details. Set <code>OPENROUTER_API_KEY</code> in{' '}
+          <code>.env</code> at the project root, then restart the server.
+        </p>
+        <div className="platform-row">
+          <span className="name">OpenRouter</span>
+          <div className="meta">
+            {aiAssistConfigured === null ? null : aiAssistConfigured ? (
+              <Badge color="green">configured</Badge>
+            ) : (
+              <Badge color="amber">not configured (AI assist unavailable)</Badge>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="panel" style={{ marginBottom: 20 }}>

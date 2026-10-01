@@ -86,7 +86,8 @@ export function getCategory(key: string): CategoryDef {
   return CATEGORY_BY_KEY.get(key) ?? CATEGORIES[CATEGORIES.length - 1]!;
 }
 
-const CATEGORY_KEYS = CATEGORIES.map((c) => c.key) as [string, ...string[]];
+/** Every category key, typed for `z.enum`. */
+export const CATEGORY_KEYS = CATEGORIES.map((c) => c.key) as [string, ...string[]];
 
 // ---------------------------------------------------------------------------
 // Records (DB-backed + API-serialized shapes)
@@ -130,8 +131,14 @@ export interface Item {
 // Validation schemas (request bodies / config files)
 // ---------------------------------------------------------------------------
 
+/** Longest item title that the API accepts. */
+export const MAX_TITLE_LENGTH = 120;
+
+/** Pickup line used when `listing.pickupLine` is not set. */
+export const DEFAULT_PICKUP_LINE = 'Local pickup only';
+
 export const itemInputSchema = z.object({
-  title: z.string().trim().min(1, 'Title is required').max(120),
+  title: z.string().trim().min(1, 'Title is required').max(MAX_TITLE_LENGTH),
   description: z.string().max(8000).default(''),
   priceCents: z.number().int().min(0).max(100_000_00),
   condition: z.enum(CONDITIONS),
@@ -141,6 +148,39 @@ export type ItemInput = z.infer<typeof itemInputSchema>;
 
 export const itemUpdateSchema = itemInputSchema.partial();
 export type ItemUpdate = z.infer<typeof itemUpdateSchema>;
+
+/** Current item editor values, sent with each `listing` assist message. */
+export const listingAssistContextSchema = z.object({
+  title: z.string().max(200),
+  description: z.string().max(8000),
+  priceCents: z.number().int().min(0).nullable(),
+  condition: z.enum(CONDITIONS),
+  category: z.enum(CATEGORY_KEYS),
+});
+export type ListingAssistContext = z.infer<typeof listingAssistContextSchema>;
+
+/**
+ * Item editor values that the `listing` assist profile suggests. Every field is
+ * nullable, not optional, because strict Structured Outputs need every field.
+ */
+export const listingAssistSuggestionsSchema = z.object({
+  title: z
+    .string()
+    .nullable()
+    .describe(`Listing title, ${MAX_TITLE_LENGTH} characters or fewer. Null if not enough information.`),
+  description: z
+    .string()
+    .nullable()
+    .describe('Full listing description based on a listing template. Null if not enough information.'),
+  priceCents: z
+    .number()
+    .int()
+    .nullable()
+    .describe('Suggested asking price in US cents, for example 4500 for $45. Null if unsure.'),
+  condition: z.enum(CONDITIONS).nullable().describe('Item condition. Null if unknown.'),
+  category: z.enum(CATEGORY_KEYS).nullable().describe('Category key. Null if unsure.'),
+});
+export type ListingAssistSuggestions = z.infer<typeof listingAssistSuggestionsSchema>;
 
 export const publishRequestSchema = z.object({
   platforms: z.array(z.enum(PLATFORMS)).min(1, 'Select at least one platform'),
@@ -188,7 +228,7 @@ export type AppLocation = z.infer<typeof locationSchema>;
 
 export const listingDefaultsSchema = z.object({
   /** Inserted into every generated listing description. */
-  pickupLine: z.string().default('Local pickup only'),
+  pickupLine: z.string().default(DEFAULT_PICKUP_LINE),
   /**
    * When scraping a retail link, suggest asking price as this fraction of
    * retail (e.g. 0.5 = half). Set to 0 to leave asking price blank.
@@ -200,7 +240,7 @@ export type ListingDefaults = z.infer<typeof listingDefaultsSchema>;
 export const appConfigSchema = z.object({
   location: locationSchema.default({ city: '', state: '', zip: '' }),
   listing: listingDefaultsSchema.default({
-    pickupLine: 'Local pickup only',
+    pickupLine: DEFAULT_PICKUP_LINE,
     askingPriceFraction: 0.5,
   }),
   publish: z
@@ -327,7 +367,7 @@ export interface ListingDescriptionParts {
  *   <retail url>
  */
 export function buildListingDescription(parts: ListingDescriptionParts): string {
-  const pickup = (parts.pickupLine ?? 'Local pickup only').trim();
+  const pickup = (parts.pickupLine ?? DEFAULT_PICKUP_LINE).trim();
   const lines: string[] = [];
 
   if (parts.askingPriceCents != null && parts.askingPriceCents > 0) {
@@ -373,3 +413,18 @@ export {
   type ListingTemplate,
   type ListingTemplateId,
 } from './listing-templates';
+
+// ---------------------------------------------------------------------------
+// AI assist chat (generic contract)
+// ---------------------------------------------------------------------------
+
+export {
+  assistRequestSchema,
+  chatMessageSchema,
+  MAX_ASSIST_MESSAGE_LENGTH,
+  MAX_ASSIST_MESSAGES,
+  type AssistRequest,
+  type AssistResponse,
+  type AssistStatusResponse,
+  type ChatMessage,
+} from './assist';

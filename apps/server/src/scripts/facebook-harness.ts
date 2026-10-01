@@ -17,6 +17,7 @@
  *   pnpm harness:facebook -- --headless   # run headless (default: headed)
  *   pnpm harness:facebook -- --keep 120   # (probe) seconds to leave the browser open
  */
+import '../env';
 import { join } from 'node:path';
 import type { Item } from '@sell/core';
 import {

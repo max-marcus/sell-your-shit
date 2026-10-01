@@ -8,6 +8,7 @@ config.json
 secrets.json
 .env
 .env.*
+!.env.sample
 
 # OS / editor cruft
 .DS_Store

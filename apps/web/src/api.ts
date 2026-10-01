@@ -1,4 +1,7 @@
 import type {
+  AssistResponse,
+  AssistStatusResponse,
+  ChatMessage,
   Item,
   ItemInput,
   ItemUpdate,
@@ -70,6 +73,13 @@ export const api = {
       body: JSON.stringify({ url }),
     }),
   getSettings: () => http<SettingsResponse>('/api/settings'),
+  getAssistStatus: () => http<AssistStatusResponse>('/api/assist/status'),
+  assist: <S>(profile: string, messages: ChatMessage[], context: unknown) =>
+    http<AssistResponse<S>>(`/api/assist/${encodeURIComponent(profile)}`, {
+      method: 'POST',
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ messages, context }),
+    }),
 };
 
 /** Subscribes to a publish job's live updates via Server-Sent Events. */
