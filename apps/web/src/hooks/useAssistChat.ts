@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
-import type { ChatMessage } from '@sell/core';
+import { MAX_ASSIST_MESSAGES, type ChatMessage } from '@sell/core';
 import { api } from '../api';
 
 /** State and actions of one AI assist chat. */
 export interface AssistChatState<S> {
+  /** The full conversation shown to the user, oldest first. */
   messages: ChatMessage[];
   /** True while a reply is in progress. */
   pending: boolean;
+  /** Message of the last failed request, or null. */
   error: string | null;
   /** Whether the server has AI assist configured. Null until known. */
   configured: boolean | null;
@@ -18,6 +20,16 @@ export interface AssistChatState<S> {
   send(text: string, context: unknown): Promise<S | null>;
   /** Clears the conversation. */
   reset(): void;
+}
+
+/**
+ * Returns the newest messages that fit in one request, starting with a user
+ * message. The page context carries the facts from older turns.
+ */
+function recentHistory(messages: ChatMessage[]): ChatMessage[] {
+  const recent = messages.slice(-MAX_ASSIST_MESSAGES);
+  const firstUser = recent.findIndex((m) => m.role === 'user');
+  return firstUser > 0 ? recent.slice(firstUser) : recent;
 }
 
 /**
@@ -50,7 +62,7 @@ export function useAssistChat<S>(profile: string): AssistChatState<S> {
     setPending(true);
     setError(null);
     try {
-      const res = await api.assist<S>(profile, next, context);
+      const res = await api.assist<S>(profile, recentHistory(next), context);
       setMessages([...next, { role: 'assistant', content: res.reply }]);
       return res.suggestions;
     } catch (err) {

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { MAX_ASSIST_MESSAGE_LENGTH } from '@sell/core';
 import { useAssistChat } from '../hooks/useAssistChat';
 
 /** Props for `AssistChat`. */
@@ -9,9 +10,11 @@ export interface AssistChatProps<S> {
   getContext: () => unknown;
   /** Called with the suggestions from each reply. */
   onSuggestions: (suggestions: S) => void;
+  /** Panel heading. */
   title?: string;
   /** Text shown before the first message. */
   intro?: string;
+  /** Placeholder for the message input. */
   placeholder?: string;
 }
 
@@ -88,6 +91,7 @@ export function AssistChat<S>({
           <textarea
             className="assist-input"
             value={draft}
+            maxLength={MAX_ASSIST_MESSAGE_LENGTH}
             placeholder={placeholder}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={onKeyDown}

@@ -6,13 +6,21 @@ import { LlmError, type LlmClient, type LlmMessage } from './types';
 const MODEL = 'openai/gpt-oss-120b';
 /** OpenRouter-only fields. Spread into the request; the SDK sends them in the body as-is. */
 const EXTRA_BODY = { provider: { order: ['cerebras'] } };
+/** Per-attempt limit. Normal replies take about 1 second; the SDK default is 10 minutes. */
+const TIMEOUT_MS = 30_000;
+const MAX_RETRIES = 1;
 
 /**
  * Creates an `LlmClient` that calls `gpt-oss-120b` through OpenRouter, with
  * Cerebras as the inference provider and strict Structured Outputs.
  */
 export function createOpenRouterClient(apiKey: string): LlmClient {
-  const client = new OpenAI({ baseURL: 'https://openrouter.ai/api/v1', apiKey });
+  const client = new OpenAI({
+    baseURL: 'https://openrouter.ai/api/v1',
+    apiKey,
+    timeout: TIMEOUT_MS,
+    maxRetries: MAX_RETRIES,
+  });
 
   return {
     async complete<T>(messages: LlmMessage[], schema: z.ZodType<T>, schemaName: string): Promise<T> {

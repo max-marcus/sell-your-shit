@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import type { AssistResponse, ChatMessage } from '@sell/core';
-import type { LlmClient } from '../llm/types';
+import { chatMessageSchema, type AssistResponse, type ChatMessage } from '@sell/core';
+import { LlmError, type LlmClient } from '../llm/types';
 import type { AnyAssistProfile } from './types';
 
 /**
@@ -25,6 +25,9 @@ export async function runAssistTurn(
     responseSchema,
     `${profile.name.replace(/\W/g, '_')}_assist`,
   );
+  // The client sends the reply back as chat history, so it must pass the request schema.
+  const reply = chatMessageSchema.shape.content.safeParse(result.reply);
+  if (!reply.success) throw new LlmError('The model returned an empty or too-long reply.');
   const suggestions = profile.normalizeSuggestions?.(result.suggestions) ?? result.suggestions;
-  return { reply: result.reply, suggestions };
+  return { reply: reply.data, suggestions };
 }

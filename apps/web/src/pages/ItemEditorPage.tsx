@@ -262,15 +262,11 @@ export function ItemEditorPage() {
     navigate('/');
   }
 
-  if (loading) {
-    return (
-      <div className="empty">
-        <span className="spinner" /> Loading…
-      </div>
-    );
-  }
-
-  const detailsForm = (
+  const detailsForm = loading ? (
+    <div className="panel empty">
+      <span className="spinner" /> Loading…
+    </div>
+  ) : (
     <div className="panel">
       <h2>Details</h2>
       <div className="form" style={{ maxWidth: 'none' }}>

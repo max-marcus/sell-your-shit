@@ -4,7 +4,9 @@ import type { ReactNode } from 'react';
 export interface SuggestionHintProps {
   /** The suggested value, formatted for display. */
   children: ReactNode;
+  /** Called when the user applies the suggestion to the field. */
   onApply: () => void;
+  /** Called when the user rejects the suggestion. */
   onDismiss: () => void;
 }
 

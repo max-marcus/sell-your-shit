@@ -2,7 +2,9 @@ import type { z } from 'zod';
 
 /** One message sent to an LLM. */
 export interface LlmMessage {
+  /** Who wrote the message. */
   role: 'system' | 'user' | 'assistant';
+  /** Plain-text message body. */
   content: string;
 }
 

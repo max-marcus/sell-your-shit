@@ -421,6 +421,8 @@ export {
 export {
   assistRequestSchema,
   chatMessageSchema,
+  MAX_ASSIST_MESSAGE_LENGTH,
+  MAX_ASSIST_MESSAGES,
   type AssistRequest,
   type AssistResponse,
   type AssistStatusResponse,
