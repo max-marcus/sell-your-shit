@@ -131,8 +131,14 @@ export interface Item {
 // Validation schemas (request bodies / config files)
 // ---------------------------------------------------------------------------
 
+/** Longest item title that the API accepts. */
+export const MAX_TITLE_LENGTH = 120;
+
+/** Pickup line used when `listing.pickupLine` is not set. */
+export const DEFAULT_PICKUP_LINE = 'Local pickup only';
+
 export const itemInputSchema = z.object({
-  title: z.string().trim().min(1, 'Title is required').max(120),
+  title: z.string().trim().min(1, 'Title is required').max(MAX_TITLE_LENGTH),
   description: z.string().max(8000).default(''),
   priceCents: z.number().int().min(0).max(100_000_00),
   condition: z.enum(CONDITIONS),
@@ -161,7 +167,7 @@ export const listingAssistSuggestionsSchema = z.object({
   title: z
     .string()
     .nullable()
-    .describe('Listing title, 120 characters or fewer. Null if not enough information.'),
+    .describe(`Listing title, ${MAX_TITLE_LENGTH} characters or fewer. Null if not enough information.`),
   description: z
     .string()
     .nullable()
@@ -222,7 +228,7 @@ export type AppLocation = z.infer<typeof locationSchema>;
 
 export const listingDefaultsSchema = z.object({
   /** Inserted into every generated listing description. */
-  pickupLine: z.string().default('Local pickup only'),
+  pickupLine: z.string().default(DEFAULT_PICKUP_LINE),
   /**
    * When scraping a retail link, suggest asking price as this fraction of
    * retail (e.g. 0.5 = half). Set to 0 to leave asking price blank.
@@ -234,7 +240,7 @@ export type ListingDefaults = z.infer<typeof listingDefaultsSchema>;
 export const appConfigSchema = z.object({
   location: locationSchema.default({ city: '', state: '', zip: '' }),
   listing: listingDefaultsSchema.default({
-    pickupLine: 'Local pickup only',
+    pickupLine: DEFAULT_PICKUP_LINE,
     askingPriceFraction: 0.5,
   }),
   publish: z
@@ -328,8 +334,6 @@ export interface SettingsResponse {
   configured: Record<Platform, boolean>;
   /** When true, all publishing is simulated regardless of credentials. */
   mockMode: boolean;
-  /** True when `OPENROUTER_API_KEY` is set, so AI assist chats work. */
-  aiAssistConfigured: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -363,7 +367,7 @@ export interface ListingDescriptionParts {
  *   <retail url>
  */
 export function buildListingDescription(parts: ListingDescriptionParts): string {
-  const pickup = (parts.pickupLine ?? 'Local pickup only').trim();
+  const pickup = (parts.pickupLine ?? DEFAULT_PICKUP_LINE).trim();
   const lines: string[] = [];
 
   if (parts.askingPriceCents != null && parts.askingPriceCents > 0) {

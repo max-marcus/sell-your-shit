@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ChatMessage } from '@sell/core';
 import { api } from '../api';
 
@@ -29,8 +29,6 @@ export function useAssistChat<S>(profile: string): AssistChatState<S> {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [configured, setConfigured] = useState<boolean | null>(null);
-  const messagesRef = useRef(messages);
-  messagesRef.current = messages;
 
   useEffect(() => {
     let active = true;
@@ -43,34 +41,31 @@ export function useAssistChat<S>(profile: string): AssistChatState<S> {
     };
   }, []);
 
-  const send = useCallback(
-    async (text: string, context: unknown): Promise<S | null> => {
-      const content = text.trim();
-      if (!content) return null;
-      const previous = messagesRef.current;
-      const next: ChatMessage[] = [...previous, { role: 'user', content }];
-      setMessages(next);
-      setPending(true);
-      setError(null);
-      try {
-        const res = await api.assist<S>(profile, next, context);
-        setMessages([...next, { role: 'assistant', content: res.reply }]);
-        return res.suggestions;
-      } catch (err) {
-        setMessages(previous);
-        setError((err as Error).message);
-        return null;
-      } finally {
-        setPending(false);
-      }
-    },
-    [profile],
-  );
+  async function send(text: string, context: unknown): Promise<S | null> {
+    const content = text.trim();
+    if (!content) return null;
+    const previous = messages;
+    const next: ChatMessage[] = [...previous, { role: 'user', content }];
+    setMessages(next);
+    setPending(true);
+    setError(null);
+    try {
+      const res = await api.assist<S>(profile, next, context);
+      setMessages([...next, { role: 'assistant', content: res.reply }]);
+      return res.suggestions;
+    } catch (err) {
+      setMessages(previous);
+      setError((err as Error).message);
+      return null;
+    } finally {
+      setPending(false);
+    }
+  }
 
-  const reset = useCallback(() => {
+  function reset() {
     setMessages([]);
     setError(null);
-  }, []);
+  }
 
   return { messages, pending, error, configured, send, reset };
 }

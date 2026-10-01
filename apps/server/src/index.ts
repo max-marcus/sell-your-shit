@@ -45,10 +45,9 @@ async function main(): Promise<void> {
   // API routes.
   await app.register(itemRoutes, { prefix: '/api' });
   await app.register(publishRoutes, { prefix: '/api' });
-  const llm = createLlmClientFromEnv();
-  await app.register(settingsRoutes, { prefix: '/api', aiAssistConfigured: llm !== null });
+  await app.register(settingsRoutes, { prefix: '/api' });
   await app.register(scrapeRoutes, { prefix: '/api' });
-  await app.register(assistRoutes, { prefix: '/api', llm });
+  await app.register(assistRoutes, { prefix: '/api', llm: createLlmClientFromEnv() });
 
   // In a production-style run (`pnpm build` first), serve the built web UI and
   // fall back to index.html for client-side routes. In dev the UI is served by

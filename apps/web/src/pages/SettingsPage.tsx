@@ -6,9 +6,14 @@ import { Badge } from '../components/StatusBadge';
 export function SettingsPage() {
   const [settings, setSettings] = useState<SettingsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [aiAssistConfigured, setAiAssistConfigured] = useState<boolean | null>(null);
 
   useEffect(() => {
     api.getSettings().then(setSettings).catch((err) => setError((err as Error).message));
+    api
+      .getAssistStatus()
+      .then((s) => setAiAssistConfigured(s.configured))
+      .catch(() => setAiAssistConfigured(false));
   }, []);
 
   if (error) return <div className="banner warn">{error}</div>;
@@ -64,7 +69,7 @@ export function SettingsPage() {
         <div className="platform-row">
           <span className="name">OpenRouter</span>
           <div className="meta">
-            {settings.aiAssistConfigured ? (
+            {aiAssistConfigured === null ? null : aiAssistConfigured ? (
               <Badge color="green">configured</Badge>
             ) : (
               <Badge color="amber">not configured (AI assist unavailable)</Badge>

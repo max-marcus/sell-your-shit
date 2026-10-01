@@ -6,9 +6,11 @@ import {
   CATEGORIES,
   CONDITIONS,
   CONDITION_LABELS,
+  DEFAULT_PICKUP_LINE,
   formatPrice,
   getCategory,
   LISTING_TEMPLATES,
+  MAX_TITLE_LENGTH,
   type Condition,
   type Item,
   type ListingAssistContext,
@@ -87,14 +89,8 @@ export function ItemEditorPage() {
 
   function receiveSuggestions(next: ListingAssistSuggestions) {
     const current = getAssistContext();
-    setSuggestions((prev) => {
-      const merged = { ...prev };
-      for (const field of SUGGESTION_FIELDS) {
-        const value = next[field];
-        if (value !== null && value !== current[field]) Object.assign(merged, { [field]: value });
-      }
-      return merged;
-    });
+    const changed = SUGGESTION_FIELDS.filter((f) => next[f] !== null && next[f] !== current[f]);
+    setSuggestions((prev) => ({ ...prev, ...Object.fromEntries(changed.map((f) => [f, next[f]])) }));
   }
 
   function dismissSuggestion(field: SuggestionField) {
@@ -138,7 +134,7 @@ export function ItemEditorPage() {
   }, [isNew, templateSeeded]);
 
   function applyTemplate(nextId: ListingTemplateId) {
-    const pickupLine = settings?.listing.pickupLine ?? 'Local pickup only';
+    const pickupLine = settings?.listing.pickupLine ?? DEFAULT_PICKUP_LINE;
     const hasEdits = !isLikelyBlankDescription(description, pickupLine);
     if (
       hasEdits &&
@@ -174,7 +170,7 @@ export function ItemEditorPage() {
     summary?: string | null;
     retailUrl?: string | null;
   }) {
-    const pickupLine = settings?.listing.pickupLine ?? 'Local pickup only';
+    const pickupLine = settings?.listing.pickupLine ?? DEFAULT_PICKUP_LINE;
     setDescription(
       buildListingDescription({
         askingPriceCents: opts.askingPriceCents,
@@ -201,7 +197,7 @@ export function ItemEditorPage() {
       setRetailUrl(result.url);
       setRetailPriceCents(result.retailPriceCents);
 
-      if (result.title) setTitle(result.title.slice(0, 120));
+      if (result.title) setTitle(result.title.slice(0, MAX_TITLE_LENGTH));
 
       const fraction = settings?.listing.askingPriceFraction ?? 0.5;
       let askingCents: number | null = null;
@@ -334,7 +330,7 @@ export function ItemEditorPage() {
             id="title"
             type="text"
             value={title}
-            maxLength={120}
+            maxLength={MAX_TITLE_LENGTH}
             placeholder="e.g. IKEA desk, white, good condition"
             onChange={(e) => setTitle(e.target.value)}
           />
@@ -413,7 +409,7 @@ export function ItemEditorPage() {
             value={description}
             placeholder={descriptionFromTemplate(
               selectedTemplate,
-              settings?.listing.pickupLine ?? 'Local pickup only',
+              settings?.listing.pickupLine ?? DEFAULT_PICKUP_LINE,
             )}
             onChange={(e) => setDescription(e.target.value)}
             style={{ minHeight: 280 }}

@@ -2,13 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import type { SettingsResponse } from '@sell/core';
 import { loadConfig, loadSecrets, isMockMode, configuredPlatforms } from '../config';
 
-/** Options for `settingsRoutes`. */
-export interface SettingsRoutesOptions {
-  /** Whether the server has an LLM client for AI assist chats. */
-  aiAssistConfigured: boolean;
-}
-
-export async function settingsRoutes(app: FastifyInstance, opts: SettingsRoutesOptions): Promise<void> {
+export async function settingsRoutes(app: FastifyInstance): Promise<void> {
   app.get('/settings', async (): Promise<SettingsResponse> => {
     const config = loadConfig();
     const secrets = loadSecrets();
@@ -19,7 +13,6 @@ export async function settingsRoutes(app: FastifyInstance, opts: SettingsRoutesO
       maxPhotos: config.maxPhotos,
       configured: configuredPlatforms(secrets),
       mockMode: isMockMode(),
-      aiAssistConfigured: opts.aiAssistConfigured,
     };
   });
 }
